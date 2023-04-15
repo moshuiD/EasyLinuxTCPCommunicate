@@ -87,29 +87,28 @@ public:
 	vector<string> ParsePack(char* buff, int getLen)
 	{
 		vector<string> ret;
-		char* packFlag = buff;
-		char* packLen = buff + 1;
-		char* pack = nullptr;
-
-		while (true)
+		char* pPackFlag = buff;
+		char* pPackLen = buff + 1;
+		char* szPack = buff + sizeof(char) + sizeof(int);
+		char* endPack = buff + getLen;
+		for (char* it = buff; it < endPack; )
 		{
-			if (*reinterpret_cast<int*>(packLen) + sizeof(int) == getLen) {
-				if (*reinterpret_cast<char*>(packFlag) == Flag::NormalMsg) {
-					ret.emplace_back(m_ObfManager.GetDecMsg(pack));
-				}
-				break;
+			int len = *reinterpret_cast<int*>(pPackLen);
+			if (*pPackFlag == Flag::NormalMsg) {
+				ret.emplace_back(m_ObfManager.GetDecMsg(szPack));
 			}
-			else if (*reinterpret_cast<int*>(packLen) + sizeof(int) < getLen && *reinterpret_cast<char*>(packFlag) == Flag::NormalMsg) {
-				ret.emplace_back(m_ObfManager.GetDecMsg(buff + len));
-			}
-			else if (*reinterpret_cast<char*>(buff + len - 1) == Flag::HeartBeat) {
+			else if (*pPackFlag == Flag::HeartBeat) {
 				Log("HeartBeat Pack");
 			}
 			else {
 				Log("Broked Data", "Len:", len, "All Len", getLen);
 				break;
 			}
-			len += 5;//len's bytes + flag's byte
+			//flag's byte + len's bytes
+			pPackFlag += (sizeof(char) + sizeof(int) + len);
+			it += (sizeof(char) + sizeof(int) + *reinterpret_cast<int*>(pPackLen));
+			pPackLen += (sizeof(char) + sizeof(int) + len);
+			szPack += (sizeof(char) + sizeof(int) + len);
 		}
 		return ret;
 	}
