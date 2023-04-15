@@ -106,7 +106,7 @@ public:
 			}
 			//flag's byte + len's bytes
 			pPackFlag += (sizeof(char) + sizeof(int) + len);
-			it += (sizeof(char) + sizeof(int) + *reinterpret_cast<int*>(pPackLen));
+			it += (sizeof(char) + sizeof(int) + len);
 			pPackLen += (sizeof(char) + sizeof(int) + len);
 			szPack += (sizeof(char) + sizeof(int) + len);
 		}
