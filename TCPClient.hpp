@@ -111,11 +111,12 @@ public:
 				Log("Broked Data", "Len:", len, "All Len", getLen);
 				break;
 			}
-			//flag's byte + len's bytes
-			pPackFlag += (sizeof(char) + sizeof(int) + len);
-			it += (sizeof(char) + sizeof(int) + len);
-			pPackLen += (sizeof(char) + sizeof(int) + len);
-			szPack += (sizeof(char) + sizeof(int) + len);
+			int FullPackLen = (sizeof(char) + sizeof(int) + len);
+			//flag's byte + len's bytes.Use pointer to do it.
+			pPackFlag += FullPackLen;
+			it += FullPackLen;
+			pPackLen += FullPackLen;
+			szPack += FullPackLen;
 		}
 		return ret;
 	}
