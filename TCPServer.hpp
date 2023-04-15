@@ -84,6 +84,12 @@ public:
 		return tempPack.second + 5;
 	}
 
+	int GetHeartBeatPack(char* buff)
+	{
+		buff = Flag::HeartBeat;
+		return 1;
+	}
+
 	vector<string> ParsePack(char* buff, int getLen)
 	{
 		vector<string> ret;

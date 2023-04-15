@@ -85,6 +85,12 @@ public:
 		return tempPack.second + 5;
 	}
 
+	int GetHeartBeatPack(char* buff)
+	{
+		buff = Flag::HeartBeat;
+		return 1;
+	}
+
 	vector<string> ParsePack(char* buff, int getLen)
 	{
 		vector<string> ret;
@@ -119,8 +125,8 @@ template<class MsgPack = BaseMessagePack<BaseObfManager>>
 class TCPClient
 {
 public:
-	explicit TCPClient(function<void(const string&)>handleFunc, const char* ip, int port, int recvBuffLen = 1024/*bytes*/) :
-		m_HandleFunc(handleFunc), m_Port(port), m_RecvBuffLen(recvBuffLen), m_IP(ip)
+	explicit TCPClient(function<void(const string&)>handleFunc, const char* ip, int port, int recvBuffLen = 1024/*bytes*/, int heartBeatDelay = 60 * 1000/*ms*/) :
+		m_HandleFunc(handleFunc), m_Port(port), m_RecvBuffLen(recvBuffLen), m_IP(ip),m_HeartBeatDelay(heartBeatDelay)
 	{
 		m_RecvBuff = new char[m_RecvBuffLen];
 		m_ClientID = socket(AF_INET, SOCK_STREAM, 0);
@@ -136,6 +142,7 @@ public:
 			throw TCPClientExcept("Connection failed.");
 		}
 		m_RecvThread = thread(&TCPClient::RecvMsgLoop, this);
+		m_HeartBeatThread = thread(&TCPClient::HeartBeatLoop, this);
 	}
 	~TCPClient()
 	{
@@ -143,9 +150,17 @@ public:
 		if (m_RecvThread.joinable()) {
 			m_RecvThread.join();
 		}
-
+		m_IsHeartBeatThreadRunning = false;
+		if (m_HeartBeatThread.joinable()) {
+			m_HeartBeatThread.join();
+		}
 		delete[] m_RecvBuff;
 	}
+	TCPClient operator= (const TCPClient&) = delete;
+	TCPClient operator= (TCPClient&&) = delete;
+	TCPClient(const TCPClient&) = delete;
+	TCPClient(TCPClient&&) = delete;
+
 	bool SendMessage(string& msg) const
 	{
 		char buff[m_RecvBuffLen]{};
@@ -159,10 +174,12 @@ private:
 	const char* m_IP;
 	int m_ClientID;
 	sockaddr_in m_SockAddr{};
-	bool m_IsRecvThreadRunning = true;
 	char* m_RecvBuff;
+	bool m_IsRecvThreadRunning = true;
 	thread m_RecvThread;
-
+	thread m_HeartBeatThread;
+	bool m_IsHeartBeatThreadRunning = true;
+	const int m_HeartBeatDelay;
 	void RecvMsgLoop()
 	{
 		Log("RecvLoop start");
@@ -182,5 +199,18 @@ private:
 			}
 			std::this_thread::sleep_for(std::chrono::microseconds(1));
 		}
+		Log("RecvLoop stop");
+	}
+	void HeartBeatLoop()
+	{
+		Log("HeartBeatLoop start");
+		while (m_IsHeartBeatThreadRunning)
+		{
+			char buff[1]{};
+			m_MsgPacker.GetHeartBeat(buff);
+			send(m_ClientID, buff, 1, 0);
+			std::this_thread::sleep_for(std::chrono::microseconds(m_HeartBeatDelay));
+		}
+		Log("HeartBeatLoop stop");
 	}
 };
