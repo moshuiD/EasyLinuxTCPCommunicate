@@ -104,8 +104,9 @@ private:
 			memset(m_RecvBuff, 0, m_RecvBuffLen);
 			int len = recv(m_ClientID, m_RecvBuff, m_RecvBuffLen, MSG_DONTWAIT);
 			if (len == 0) {
-				Log("Server remove ID:", m_ClientID);
+				Log("Server Connect Lost ID:", m_ClientID);
 				close(m_ClientID);
+				throw TCPClientExcept("Server Connect Lost");
 			}
 			else if (len != -1) {
 				Log("[+] GetMsg");
