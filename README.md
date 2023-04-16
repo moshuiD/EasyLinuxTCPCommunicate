@@ -8,6 +8,6 @@ TCPServer/TCPClient .hpp
 # What can it do?  
 This project have A basic TCP Server & Client.So it can send&receive msg between C&S.  
 # Project Introduction
-1.It have a specialized expection.  
+1.It have a specialized exception.  
 2.It have a basic packet protocol.  
-3.Basic protocol can easy encryption.  
+3.Basic protocol can be easy encryption.  
