@@ -1,6 +1,6 @@
 # LinuxTCPServer  
 A simply TCP Communicate template.  
-#How to use  
+# How to use  
 Include TCPServer/TCPClient & Vendors. "Log.hpp" is not necessary.  
 If not used log only change  
 TCPServer/TCPClient .hpp  
