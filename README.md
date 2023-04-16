@@ -10,4 +10,4 @@ This project have A basic TCP Server & Client.So it can send&receive msg between
 # Project Introduction
 1.It have a specialized exception.  
 2.It have a basic packet protocol.  
-3.Basic protocol can easy encrypt packet.  
+3.Basic protocol can easy encrypt packet.    
