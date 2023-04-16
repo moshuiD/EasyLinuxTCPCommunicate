@@ -81,6 +81,7 @@
     <ClInclude Include="Log.hpp" />
     <ClInclude Include="TCPClient.hpp" />
     <ClInclude Include="TCPServer.hpp" />
+    <ClInclude Include="Vendors.hpp" />
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>

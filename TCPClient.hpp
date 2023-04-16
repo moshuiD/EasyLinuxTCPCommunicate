@@ -1,5 +1,12 @@
 #pragma once
+#define DEBUG 1 //Is or not show Log
+#if (DEBUG == 1)
 #include "Log.hpp"
+#endif
+#if (DEBUG != 1)
+#define Log(...)
+#endif
+#include "Vendors.hpp"//As is known to all,must under than #define.
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -9,19 +16,12 @@
 #include <string>
 #include <thread>
 #include <chrono>
-#include <vector>
-#include <mutex>
 #include <functional>
-#include <utility>
 
 using std::thread;
 using std::string;
 using std::exception;
-using std::vector;
-using std::mutex;
-using std::lock_guard;
 using std::function;
-using std::pair;
 
 class TCPClientExcept :public exception
 {
@@ -36,97 +36,11 @@ private:
 	const string m_Info;
 };
 
-class BaseObfManager
-{
-public:
-	BaseObfManager() = default;
-	~BaseObfManager() = default;
-	[[nodiscard]] inline pair<char*, int> GetObfMsg(char* msg) noexcept
-	{
-		return { msg,strlen(msg) };
-	}
-	[[nodiscard]] inline char* GetDecMsg(char* msg) noexcept
-	{
-		return msg;
-	}
-};
-
-template<class ObfManager = BaseObfManager>
-class BaseMessagePack
-{
-private:
-	ObfManager m_ObfManager;
-	/* ______________________________
-	* | 1 byte | 4 bytes |    ...    |
-	* |________|_________|___________|
-	* |  Flag  | PackLen | obfed msg |
-	* |________|_________|___________|
-	*/
-	enum Flag : char
-	{
-		NormalMsg = 0,
-		HeartBeat = 1,
-	};
-public:
-	BaseMessagePack() = default;
-	~BaseMessagePack() = default;
-	/// <summary>
-	/// 获取一个封装的包
-	/// </summary>
-	/// <param name="msg">要发送的文本</param>
-	/// <param name="buff">封装好的包</param>
-	/// <returns>完整的包大小</returns>
-	int GetMessagePack(const string& msg, char* buff)
-	{
-		pair<char*, int> tempPack = m_ObfManager.GetObfMsg(msg.c_str());
-		buff = Flag::NormalMsg;
-		buff + 5 = tempPack.first;
-		*buff + 1 = tempPack.second;
-		return tempPack.second + 5;
-	}
-
-	int GetHeartBeatPack(char* buff)
-	{
-		buff = Flag::HeartBeat;
-		return 1;
-	}
-
-	vector<string> ParsePack(char* buff, int getLen)
-	{
-		vector<string> ret;
-		char* pPackFlag = buff;
-		char* pPackLen = buff + 1;
-		char* szPack = buff + sizeof(char) + sizeof(int);
-		char* endPack = buff + getLen;
-		for (char* it = buff; it < endPack; )
-		{
-			int len = *reinterpret_cast<int*>(pPackLen);
-			if (*pPackFlag == Flag::NormalMsg) {
-				ret.emplace_back(m_ObfManager.GetDecMsg(szPack));
-			}
-			else if (*pPackFlag == Flag::HeartBeat) {
-				Log("HeartBeat Pack");
-			}
-			else {
-				Log("Broked Data", "Len:", len, "All Len", getLen);
-				break;
-			}
-			int FullPackLen = (sizeof(char) + sizeof(int) + len);
-			//flag's byte + len's bytes.Use pointer to do it.
-			pPackFlag += FullPackLen;
-			it += FullPackLen;
-			pPackLen += FullPackLen;
-			szPack += FullPackLen;
-		}
-		return ret;
-	}
-};
-
 template<class MsgPack = BaseMessagePack<BaseObfManager>>
 class TCPClient
 {
 public:
-	explicit TCPClient(function<void(const string&)>handleFunc, const char* ip, int port, int recvBuffLen = 1024/*bytes*/, int heartBeatDelay = 60 * 1000/*ms*/) :
+	explicit TCPClient(function<void(const string&)>handleFunc, const char* ip, int port, int recvBuffLen = 1024/*bytes*/, int heartBeatDelay = 60/*s*/) :
 		m_HandleFunc(handleFunc), m_Port(port), m_RecvBuffLen(recvBuffLen), m_IP(ip),m_HeartBeatDelay(heartBeatDelay)
 	{
 		m_RecvBuff = new char[m_RecvBuffLen];
@@ -139,7 +53,7 @@ public:
 		m_SockAddr.sin_port = htons(m_Port);
 		inet_pton(AF_INET, m_IP, &m_SockAddr.sin_addr);
 
-		if (connect(m_ClientID, &m_SockAddr, sizeof(m_SockAddr)) == -1) {
+		if (connect(m_ClientID,reinterpret_cast<sockaddr*>(&m_SockAddr), sizeof(m_SockAddr)) == -1) {
 			throw TCPClientExcept("Connection failed.");
 		}
 		m_RecvThread = thread(&TCPClient::RecvMsgLoop, this);
@@ -162,7 +76,7 @@ public:
 	TCPClient(const TCPClient&) = delete;
 	TCPClient(TCPClient&&) = delete;
 
-	bool SendMessage(string& msg) const
+	inline bool SendMessage(string& msg)
 	{
 		char buff[m_RecvBuffLen]{};
 		int len = m_MsgPacker.GetMessagePack(msg, buff);
@@ -181,18 +95,20 @@ private:
 	thread m_HeartBeatThread;
 	bool m_IsHeartBeatThreadRunning = true;
 	const int m_HeartBeatDelay;
+	MsgPack m_MsgPacker;
 	void RecvMsgLoop()
 	{
 		Log("RecvLoop start");
 		while (m_IsRecvThreadRunning)
 		{
+			memset(m_RecvBuff, 0, m_RecvBuffLen);
 			int len = recv(m_ClientID, m_RecvBuff, m_RecvBuffLen, MSG_DONTWAIT);
 			if (len == 0) {
 				Log("Server remove ID:", m_ClientID);
 				close(m_ClientID);
 			}
 			else if (len != -1) {
-				Log("GetMsg:", m_RecvBuff);
+				Log("[+] GetMsg");
 				for (const auto& msg : m_MsgPacker.ParsePack(m_RecvBuff, len))
 				{
 					m_HandleFunc(string(msg));
@@ -208,9 +124,9 @@ private:
 		while (m_IsHeartBeatThreadRunning)
 		{
 			char buff[1]{};
-			m_MsgPacker.GetHeartBeat(buff);
+			m_MsgPacker.GetHeartBeatPack(buff);
 			send(m_ClientID, buff, 1, 0);
-			std::this_thread::sleep_for(std::chrono::microseconds(m_HeartBeatDelay));
+			std::this_thread::sleep_for(std::chrono::seconds(m_HeartBeatDelay));
 		}
 		Log("HeartBeatLoop stop");
 	}
