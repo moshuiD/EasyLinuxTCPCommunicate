@@ -13,9 +13,9 @@ class BaseObfManager
 public:
 	BaseObfManager() = default;
 	~BaseObfManager() = default;
-	[[nodiscard]] inline pair<char*, int> GetObfMsg(char* msg) noexcept
+	[[nodiscard]] inline pair<char*, int> GetObfMsg(char* msg,int msgLen) noexcept
 	{
-		return { msg,strlen(msg) };
+		return { msg,msgLen };
 	}
 	[[nodiscard]] inline char* GetDecMsg(char* msg) noexcept
 	{
@@ -50,7 +50,7 @@ public:
 	/// <returns>完整的包大小</returns>
 	int GetMessagePack(const string& msg, char* buff)
 	{
-		pair<char*, int> tempPack = m_ObfManager.GetObfMsg(const_cast<char*>(msg.c_str()));
+		pair<char*, int> tempPack = m_ObfManager.GetObfMsg(const_cast<char*>(msg.c_str()),msg.length());
 		buff[0] = Flag::NormalMsg;
 		memcpy(buff + 5, tempPack.first,tempPack.second);
 		*(buff + 1) = tempPack.second;

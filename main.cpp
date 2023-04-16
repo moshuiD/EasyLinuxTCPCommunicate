@@ -16,7 +16,7 @@ int main()
 			string msg;
 			int clientID;
 			printf("Put in msg:");
-			std::cin >> msg;
+			getline(std::cin, msg);
 			printf("Put in ClientID:");
 			std::cin >> clientID;
 			T.SendMessage(clientID, msg);
